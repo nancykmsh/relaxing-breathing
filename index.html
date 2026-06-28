@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenBreather 呼吸練習</title>
+    <style>
+        body { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            min-height: 100vh; background: #f1f5f9; margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden; color: #334155;
+        }
+
+        .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; }
+        
+        .circle { 
+            width: 150px; height: 150px; background: radial-gradient(circle, #81d4fa, #26a69a); 
+            border-radius: 50%; box-shadow: 0 0 40px rgba(38, 166, 154, 0.2);
+            transition: transform 0.1s linear; 
+        }
+
+        /* 數字樣式：放大至 48px 並加粗 */
+        #timer-display {
+            position: absolute;
+            font-size: 48px;       
+            font-weight: 700;      
+            color: white;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3); 
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .controls-container { 
+            display: flex; flex-direction: column; align-items: center; 
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10; 
+        }
+        .controls-container.active { transform: translateY(80px); opacity: 0.7; }
+
+        .status-text { 
+            font-size: 24px; margin-bottom: 20px; font-weight: 500; height: 30px;
+            transition: opacity 0.5s ease-in-out; 
+            opacity: 1;
+        }
+
+        .ui-group { 
+            background: rgba(255, 255, 255, 0.8); padding: 10px 20px; 
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex; align-items: center; gap: 15px; 
+        }
+
+        select { 
+            background: transparent; border: none; font-size: 16px; 
+            appearance: none; text-align: center; width: 140px; cursor: pointer;
+        }
+
+        button { 
+            width: 50px; height: 50px; border-radius: 50%; border: none; 
+            font-size: 20px; cursor: pointer; transition: 0.3s; 
+        }
+        #startBtn { background-color: #26a69a; color: white; }
+        #stopBtn { background-color: #94a3b8; color: white; }
+        button:active { transform: scale(0.9); }
+    </style>
+</head>
+<body>
+
+    <div class="visual-area">
+        <div class="circle" id="circle"></div>
+        <div id="timer-display"></div>
+    </div>
+
+    <div class="controls-container" id="controls">
+        <div class="status-text" id="status">準備好了嗎？</div>
+        
+        <div class="ui-group">
+            <select id="mode">
+                <option value="4-2-6">4-2-6 放鬆法</option>
+                <option value="4-7-8">4-7-8 助眠法</option>
+                <option value="4-4-4-4">4-4-4-4 方塊呼吸</option>
+            </select>
+            <button id="startBtn" onclick="toggleBreathing(true)">▶</button>
+            <button id="stopBtn" onclick="toggleBreathing(false)">■</button>
+        </div>
+    </div>
+
+    <script>
+        const circle = document.getElementById('circle');
+        const timerDisplay = document.getElementById('timer-display');
+        const status = document.getElementById('status');
+        const controls = document.getElementById('controls');
+        let isRunning = false;
+
+        const configs = {
+            "4-2-6":   { inhale: 4000, hold1: 2000, exhale: 6000, hold2: 0 },
+            "4-7-8":   { inhale: 4000, hold1: 7000, exhale: 8000, hold2: 0 },
+            "4-4-4-4": { inhale: 4000, hold1: 4000, exhale: 4000, hold2: 4000 }
+        };
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        async function runPhase(duration, label) {
+            status.innerText = label;
+            const startTime = Date.now();
+            const endTime = startTime + duration;
+            
+            while (isRunning && Date.now() < endTime) {
+                const remaining = Math.ceil((endTime - Date.now()) / 1000);
+                timerDisplay.innerText = remaining;
+                await sleep(100);
+            }
+        }
+
+        async function updateStatus(text, duration = 0) {
+            status.style.opacity = 0;
+            await sleep(500);
+            status.innerText = text;
+            status.style.opacity = 1;
+            if (duration > 0) await sleep(duration);
+        }
+
+        async function toggleBreathing(start) {
+            if (start) {
+                if (isRunning) return;
+                isRunning = true;
+                controls.classList.add('active');
+                runCycle();
+            } else {
+                isRunning = false;
+                controls.classList.remove('active');
+                timerDisplay.innerText = "";
+                circle.style.transform = "scale(1)";
+                await updateStatus("你做得很棒！", 2000);
+                await updateStatus("準備好了嗎？");
+            }
+        }
+
+        async function runCycle() {
+            while (isRunning) {
+                const cfg = configs[document.getElementById('mode').value];
+                
+                circle.style.transition = `transform ${cfg.inhale}ms linear`;
+                circle.style.transform = "scale(2.2)";
+                await runPhase(cfg.inhale, "吸氣...");
+
+                if (!isRunning) break;
+                if (cfg.hold1 > 0) await runPhase(cfg.hold1, "保持...");
+
+                circle.style.transition = `transform ${cfg.exhale}ms linear`;
+                circle.style.transform = "scale(1)";
+                await runPhase(cfg.exhale, "吐氣...");
+
+                if (!isRunning) break;
+                if (cfg.hold2 > 0) await runPhase(cfg.hold2, "暫停...");
+            }
+        }
+    </script>
+</body>
+</html>
