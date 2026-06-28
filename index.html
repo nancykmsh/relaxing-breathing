@@ -4,37 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>呼吸減壓</title>
-    <link rel="icon" href="IMG_0033.jpeg" type="image/jpeg">
-    <link rel="apple-touch-icon" href="IMG_0033.jpeg">
     <style>
         :root { --hue: 180; --bg: hsl(var(--hue), 20%, 95%); --text: #334155; --circle: hsl(var(--hue), 50%, 60%); --ui-bg: rgba(0,0,0,0.05); --btn-bg: #cbd5e1; }
         .theme-dark { --bg: #2d3436; --text: #dfe6e9; --circle: hsl(var(--hue), 20%, 40%); --ui-bg: rgba(255,255,255,0.08); --btn-bg: #636e72; }
-
         body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); margin: 0; color: var(--text); transition: background 0.3s ease, color 0.3s ease; font-family: sans-serif; overflow: hidden; }
-        .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
+        .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; touch-action: manipulation; }
+        #circle-wrapper { display: flex; align-items: center; justify-content: center; transform: scale(1); }
         .circle { width: 150px; height: 150px; background: radial-gradient(circle, var(--circle), var(--bg)); border-radius: 50%; box-shadow: 0 0 40px rgba(0,0,0,0.1); transition: transform 0.2s ease; }
-        
         #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; user-select: none; }
-        
         .controls-container { transition: all 0.5s ease-in-out; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .controls-container.active { transform: translateY(100px); opacity: 0.5; }
-        
-        .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 1.2s ease-in-out; }
-        
+        .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 0.4s ease-in-out; pointer-events: none; }
         .ui-group { background: var(--ui-bg); padding: 15px 25px; border-radius: 50px; display: flex; align-items: center; gap: 15px; }
-        
-        /* 更新後的溫馨小語 */
         .disclaimer { font-size: 10px; opacity: 0.4; margin-top: 15px; color: var(--text); font-style: italic; }
-
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         select, button { cursor: pointer; background: transparent; border: none; font-size: 16px; color: var(--text); }
         button { width: 45px; height: 45px; border-radius: 50%; background: var(--btn-bg); color: #fff; }
-        input[type=range] { width: 80px; }
+        input[type=range] { width: 60px; accent-color: var(--circle); }
     </style>
 </head>
 <body>
-    <div class="visual-area" onclick="cycleDisplayMode()">
-        <div class="circle" id="circle"></div>
+    <div class="visual-area" id="visual-area">
+        <div id="circle-wrapper">
+            <div class="circle" id="circle"></div>
+        </div>
         <div id="timer-display"></div>
     </div>
     <div class="controls-container" id="controls">
@@ -45,7 +38,7 @@
                 <option value="4-7-8">4-7-8</option>
                 <option value="4-4-4-4">4-4-4-4</option>
             </select>
-            <input type="range" min="0" max="360" value="180" oninput="updateHue(this.value)">
+            <input type="range" min="0" max="360" value="180" oninput="updateHue(this.value)" id="hue-slider">
             <button onclick="document.body.classList.toggle('theme-dark')">🌙</button>
             <button id="btn-start" onclick="toggleBreathing(true)">▶</button>
             <button id="btn-stop" onclick="stopBreathing()" disabled>■</button>
@@ -53,17 +46,88 @@
         <div class="disclaimer">練習節奏，舒緩身心。</div>
     </div>
     <script>
-        function updateHue(val) { document.documentElement.style.setProperty('--hue', val); }
-        const circle = document.getElementById('circle'), status = document.getElementById('status'), timerDisplay = document.getElementById('timer-display'), controls = document.getElementById('controls');
-        const btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop');
+        const visualArea = document.getElementById('visual-area'),
+              circleWrapper = document.getElementById('circle-wrapper'),
+              circle = document.getElementById('circle'),
+              status = document.getElementById('status'),
+              timerDisplay = document.getElementById('timer-display'),
+              controls = document.getElementById('controls'),
+              btnStart = document.getElementById('btn-start'),
+              btnStop = document.getElementById('btn-stop'),
+              hueSlider = document.getElementById('hue-slider');
         
-        let isRunning = false;
-        let displayMode = 2; 
-        
-        function cycleDisplayMode() {
-            displayMode = (displayMode + 1) % 4;
-            circle.style.transform = "scale(0.95)";
-            setTimeout(() => circle.style.transform = "scale(1)", 100);
+        let isRunning = false, displayMode = 2, autoHueInterval = null, hueValue = 180, tapTimer = null;
+
+        // 加入震動與視覺回饋
+        function pulseFeedback() {
+            // 嘗試觸發手機震動 (50毫秒)
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+            circleWrapper.style.transition = "transform 0.08s ease-out";
+            circleWrapper.style.transform = "scale(1.08)";
+            setTimeout(() => {
+                circleWrapper.style.transition = "transform 0.12s ease-in-out";
+                circleWrapper.style.transform = "scale(0.97)";
+            }, 80);
+            setTimeout(() => {
+                circleWrapper.style.transition = "transform 0.18s ease-out";
+                circleWrapper.style.transform = "scale(1)";
+            }, 200);
+        }
+
+        function updateHue(val) { 
+            if (autoHueInterval) { clearInterval(autoHueInterval); autoHueInterval = null; }
+            hueValue = val; 
+            document.documentElement.style.setProperty('--hue', val); 
+        }
+
+        visualArea.onclick = (e) => {
+            pulseFeedback();
+            if (tapTimer) {
+                clearTimeout(tapTimer);
+                tapTimer = null;
+                toggleAutoHue();
+            } else {
+                tapTimer = setTimeout(() => {
+                    tapTimer = null;
+                    displayMode = (displayMode + 1) % 4;
+                }, 250);
+            }
+        };
+
+        function showStatus(text, stay = 1000) {
+            status.style.transition = "none";
+            status.style.opacity = 0;
+            status.innerText = text;
+            void status.offsetWidth; 
+            status.style.transition = "opacity 0.4s ease-in-out";
+            status.style.opacity = 1;
+            setTimeout(() => {
+                status.style.opacity = 0;
+                setTimeout(() => {
+                    if (!isRunning) {
+                        status.innerText = "準備好了嗎？";
+                        status.style.opacity = 1;
+                    }
+                }, 400);
+            }, stay);
+        }
+
+        function toggleAutoHue() {
+            if (autoHueInterval) {
+                clearInterval(autoHueInterval);
+                autoHueInterval = null;
+                showStatus("已關閉色彩循環");
+            } else {
+                autoHueInterval = setInterval(() => {
+                    hueValue = (parseInt(hueValue) + 1) % 360;
+                    hueSlider.value = hueValue;
+                    document.documentElement.style.setProperty('--hue', hueValue);
+                }, 100);
+                showStatus("已開啟色彩循環");
+            }
         }
 
         const configs = { "4-2-6": {inhale:4, hold1:2, exhale:6, hold2:0}, "4-7-8": {inhale:4, hold1:7, exhale:8, hold2:0}, "4-4-4-4": {inhale:4, hold1:4, exhale:4, hold2:4} };
@@ -72,13 +136,9 @@
             isRunning = true; btnStart.disabled = true; btnStop.disabled = false;
             controls.classList.add('active');
             status.style.opacity = 0; 
-            
             while(isRunning) {
                 const cfg = configs[document.getElementById('mode').value];
-                const phases = [
-                    {t: "吸氣", s: 2.2, d: cfg.inhale}, {t: "保持", s: 2.2, d: cfg.hold1}, 
-                    {t: "吐氣", s: 1, d: cfg.exhale}, {t: "保持", s: 1, d: cfg.hold2}
-                ];
+                const phases = [{t: "吸氣", s: 2.2, d: cfg.inhale}, {t: "保持", s: 2.2, d: cfg.hold1}, {t: "吐氣", s: 1, d: cfg.exhale}, {t: "保持", s: 1, d: cfg.hold2}];
                 for(let p of phases) {
                     if(!isRunning) break;
                     if(p.d > 0) { 
@@ -100,7 +160,7 @@
         async function stopBreathing() {
             isRunning = false; btnStop.disabled = true;
             timerDisplay.innerText = ""; 
-            circle.style.transition = "transform 0.8s ease-in-out";
+            circle.style.transition = "transform 0.8s ease-in-out"; 
             circle.style.transform = "scale(1)";
             controls.classList.remove('active');
             await new Promise(r => controls.addEventListener('transitionend', r, {once: true}));
