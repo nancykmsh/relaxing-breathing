@@ -14,7 +14,8 @@
         .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
         .circle { width: 150px; height: 150px; background: radial-gradient(circle, var(--circle), var(--bg)); border-radius: 50%; box-shadow: 0 0 40px rgba(0,0,0,0.1); transition: transform 0.2s ease; }
         
-        #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; user-select: none; }
+        /* 已移除 text-shadow，讓文字更純粹 */
+        #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; user-select: none; }
         
         .controls-container { transition: all 0.5s ease-in-out; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .controls-container.active { transform: translateY(100px); opacity: 0.5; }
@@ -22,6 +23,8 @@
         .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 1.2s ease-in-out; }
         
         .ui-group { background: var(--ui-bg); padding: 15px 25px; border-radius: 50px; display: flex; align-items: center; gap: 15px; }
+        .disclaimer { font-size: 10px; opacity: 0.5; margin-top: 10px; color: var(--text); }
+
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         select, button { cursor: pointer; background: transparent; border: none; font-size: 16px; color: var(--text); }
         button { width: 45px; height: 45px; border-radius: 50%; background: var(--btn-bg); color: #fff; }
@@ -46,6 +49,7 @@
             <button id="btn-start" onclick="toggleBreathing(true)">▶</button>
             <button id="btn-stop" onclick="stopBreathing()" disabled>■</button>
         </div>
+        <div class="disclaimer">本應用僅供放鬆參考，非醫療診斷工具。</div>
     </div>
     <script>
         function updateHue(val) { document.documentElement.style.setProperty('--hue', val); }
@@ -53,7 +57,7 @@
         const btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop');
         
         let isRunning = false;
-        let displayMode = 2; // 預設為僅提示模式
+        let displayMode = 2; 
         
         function cycleDisplayMode() {
             displayMode = (displayMode + 1) % 4;
