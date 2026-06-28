@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>呼吸療法</title>
+    <title>ZenBreather Pro</title>
     <link rel="icon" href="IMG_0033.jpeg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="IMG_0033.jpeg">
     <style>
         :root { --hue: 180; --bg: hsl(var(--hue), 20%, 95%); --text: #334155; --circle: hsl(var(--hue), 50%, 60%); --ui-bg: rgba(0,0,0,0.05); --btn-bg: #cbd5e1; }
         .theme-dark { --bg: #2d3436; --text: #dfe6e9; --circle: hsl(var(--hue), 20%, 40%); --ui-bg: rgba(255,255,255,0.08); --btn-bg: #636e72; }
@@ -18,7 +19,6 @@
         .controls-container { transition: all 0.5s ease-in-out; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .controls-container.active { transform: translateY(100px); opacity: 0.5; }
         
-        /* 將淡入淡出時間調整為 1.2s */
         .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 1.2s ease-in-out; }
         
         .ui-group { background: var(--ui-bg); padding: 15px 25px; border-radius: 50px; display: flex; align-items: center; gap: 15px; }
@@ -53,7 +53,7 @@
         const btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop');
         
         let isRunning = false;
-        let displayMode = 2; 
+        let displayMode = 2; // 預設為僅提示模式
         
         function cycleDisplayMode() {
             displayMode = (displayMode + 1) % 4;
