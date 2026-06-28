@@ -2,158 +2,105 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="IMG_0033.jpeg" type="image/jpeg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZenBreather 呼吸練習</title>
+    <title>ZenBreather Pro</title>
+    <link rel="icon" href="IMG_0033.jpeg" type="image/jpeg">
     <style>
-        body { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            min-height: 100vh; background: #f1f5f9; margin: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden; color: #334155;
-        }
+        :root { --hue: 180; --bg: hsl(var(--hue), 20%, 95%); --text: #334155; --circle: hsl(var(--hue), 50%, 60%); --ui-bg: rgba(0,0,0,0.05); --btn-bg: #cbd5e1; }
+        .theme-dark { --bg: #2d3436; --text: #dfe6e9; --circle: hsl(var(--hue), 20%, 40%); --ui-bg: rgba(255,255,255,0.08); --btn-bg: #636e72; }
 
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); margin: 0; color: var(--text); transition: background 0.3s ease, color 0.3s ease; font-family: sans-serif; overflow: hidden; }
         .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .circle { width: 150px; height: 150px; background: radial-gradient(circle, var(--circle), var(--bg)); border-radius: 50%; box-shadow: 0 0 40px rgba(0,0,0,0.1); }
         
-        .circle { 
-            width: 150px; height: 150px; background: radial-gradient(circle, #81d4fa, #26a69a); 
-            border-radius: 50%; box-shadow: 0 0 40px rgba(38, 166, 154, 0.2);
-            transition: transform 0.1s linear; 
-        }
-
-        /* 數字樣式：放大至 48px 並加粗 */
-        #timer-display {
-            position: absolute;
-            font-size: 48px;       
-            font-weight: 700;      
-            color: white;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.3); 
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        .controls-container { 
-            display: flex; flex-direction: column; align-items: center; 
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10; 
-        }
-        .controls-container.active { transform: translateY(80px); opacity: 0.7; }
-
-        .status-text { 
-            font-size: 24px; margin-bottom: 20px; font-weight: 500; height: 30px;
-            transition: opacity 0.5s ease-in-out; 
-            opacity: 1;
-        }
-
-        .ui-group { 
-            background: rgba(255, 255, 255, 0.8); padding: 10px 20px; 
-            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            display: flex; align-items: center; gap: 15px; 
-        }
-
-        select { 
-            background: transparent; border: none; font-size: 16px; 
-            appearance: none; text-align: center; width: 140px; cursor: pointer;
-        }
-
-        button { 
-            width: 50px; height: 50px; border-radius: 50%; border: none; 
-            font-size: 20px; cursor: pointer; transition: 0.3s; 
-        }
-        #startBtn { background-color: #26a69a; color: white; }
-        #stopBtn { background-color: #94a3b8; color: white; }
-        button:active { transform: scale(0.9); }
+        #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; }
+        
+        .controls-container { transition: all 0.5s ease-in-out; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .controls-container.active { transform: translateY(100px); opacity: 0.5; }
+        
+        .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 1.0s ease-in-out; }
+        
+        .ui-group { background: var(--ui-bg); padding: 15px 25px; border-radius: 50px; display: flex; align-items: center; gap: 15px; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        select, button { cursor: pointer; background: transparent; border: none; font-size: 16px; color: var(--text); }
+        button { width: 45px; height: 45px; border-radius: 50%; background: var(--btn-bg); color: #fff; }
+        input[type=range] { width: 80px; }
     </style>
 </head>
 <body>
-
     <div class="visual-area">
         <div class="circle" id="circle"></div>
         <div id="timer-display"></div>
     </div>
-
     <div class="controls-container" id="controls">
         <div class="status-text" id="status">準備好了嗎？</div>
-        
         <div class="ui-group">
             <select id="mode">
-                <option value="4-2-6">4-2-6 放鬆法</option>
-                <option value="4-7-8">4-7-8 助眠法</option>
-                <option value="4-4-4-4">4-4-4-4 方塊呼吸</option>
+                <option value="4-2-6">4-2-6</option>
+                <option value="4-7-8">4-7-8</option>
+                <option value="4-4-4-4">4-4-4-4</option>
             </select>
-            <button id="startBtn" onclick="toggleBreathing(true)">▶</button>
-            <button id="stopBtn" onclick="toggleBreathing(false)">■</button>
+            <input type="range" min="0" max="360" value="180" oninput="updateHue(this.value)">
+            <button onclick="document.body.classList.toggle('theme-dark')">🌙</button>
+            <button id="btn-start" onclick="toggleBreathing(true)">▶</button>
+            <button id="btn-stop" onclick="stopBreathing()" disabled>■</button>
         </div>
     </div>
-
     <script>
-        const circle = document.getElementById('circle');
-        const timerDisplay = document.getElementById('timer-display');
-        const status = document.getElementById('status');
-        const controls = document.getElementById('controls');
+        function updateHue(val) { document.documentElement.style.setProperty('--hue', val); }
+        const circle = document.getElementById('circle'), status = document.getElementById('status'), timerDisplay = document.getElementById('timer-display'), controls = document.getElementById('controls');
+        const btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop');
         let isRunning = false;
-
-        const configs = {
-            "4-2-6":   { inhale: 4000, hold1: 2000, exhale: 6000, hold2: 0 },
-            "4-7-8":   { inhale: 4000, hold1: 7000, exhale: 8000, hold2: 0 },
-            "4-4-4-4": { inhale: 4000, hold1: 4000, exhale: 4000, hold2: 4000 }
-        };
-
-        const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-        async function runPhase(duration, label) {
-            status.innerText = label;
-            const startTime = Date.now();
-            const endTime = startTime + duration;
-            
-            while (isRunning && Date.now() < endTime) {
-                const remaining = Math.ceil((endTime - Date.now()) / 1000);
-                timerDisplay.innerText = remaining;
-                await sleep(100);
-            }
-        }
-
-        async function updateStatus(text, duration = 0) {
-            status.style.opacity = 0;
-            await sleep(500);
-            status.innerText = text;
-            status.style.opacity = 1;
-            if (duration > 0) await sleep(duration);
-        }
+        const configs = { "4-2-6": {inhale:4, hold1:2, exhale:6, hold2:0}, "4-7-8": {inhale:4, hold1:7, exhale:8, hold2:0}, "4-4-4-4": {inhale:4, hold1:4, exhale:4, hold2:4} };
 
         async function toggleBreathing(start) {
-            if (start) {
-                if (isRunning) return;
-                isRunning = true;
-                controls.classList.add('active');
-                runCycle();
-            } else {
-                isRunning = false;
-                controls.classList.remove('active');
-                timerDisplay.innerText = "";
-                circle.style.transform = "scale(1)";
-                await updateStatus("你做得很棒！", 2000);
-                await updateStatus("準備好了嗎？");
+            isRunning = true; btnStart.disabled = true; btnStop.disabled = false;
+            controls.classList.add('active');
+            status.style.opacity = 0; 
+            
+            while(isRunning) {
+                const cfg = configs[document.getElementById('mode').value];
+                const phases = [
+                    {t: "吸氣", s: 2.2, d: cfg.inhale}, {t: "保持", s: 2.2, d: cfg.hold1}, 
+                    {t: "吐氣", s: 1, d: cfg.exhale}, {t: "保持", s: 1, d: cfg.hold2}
+                ];
+                for(let p of phases) {
+                    if(!isRunning) break;
+                    if(p.d > 0) { 
+                        circle.style.transition = `transform ${p.d}s linear`; 
+                        circle.style.transform = `scale(${p.s})`;
+                        for(let i = p.d; i > 0; i--) {
+                            if(!isRunning) break;
+                            timerDisplay.innerText = `${i}\n${p.t}`;
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                    }
+                }
             }
         }
 
-        async function runCycle() {
-            while (isRunning) {
-                const cfg = configs[document.getElementById('mode').value];
-                
-                circle.style.transition = `transform ${cfg.inhale}ms linear`;
-                circle.style.transform = "scale(2.2)";
-                await runPhase(cfg.inhale, "吸氣...");
-
-                if (!isRunning) break;
-                if (cfg.hold1 > 0) await runPhase(cfg.hold1, "保持...");
-
-                circle.style.transition = `transform ${cfg.exhale}ms linear`;
-                circle.style.transform = "scale(1)";
-                await runPhase(cfg.exhale, "吐氣...");
-
-                if (!isRunning) break;
-                if (cfg.hold2 > 0) await runPhase(cfg.hold2, "暫停...");
-            }
+        async function stopBreathing() {
+            isRunning = false; btnStop.disabled = true;
+            timerDisplay.innerText = ""; 
+            
+            circle.style.transition = "transform 0.8s ease-in-out";
+            circle.style.transform = "scale(1)";
+            
+            controls.classList.remove('active');
+            await new Promise(r => controls.addEventListener('transitionend', r, {once: true}));
+            
+            await new Promise(r => setTimeout(r, 1000));
+            
+            status.style.opacity = 1;
+            status.innerText = "你做得很棒！";
+            await new Promise(r => setTimeout(r, 2000));
+            
+            status.style.opacity = 0;
+            await new Promise(r => status.addEventListener('transitionend', r, {once: true}));
+            status.innerText = "準備好了嗎？"; 
+            status.style.opacity = 1;
+            
+            btnStart.disabled = false;
         }
     </script>
 </body>
