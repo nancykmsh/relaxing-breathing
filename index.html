@@ -10,15 +10,16 @@
         .theme-dark { --bg: #2d3436; --text: #dfe6e9; --circle: hsl(var(--hue), 20%, 40%); --ui-bg: rgba(255,255,255,0.08); --btn-bg: #636e72; }
 
         body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); margin: 0; color: var(--text); transition: background 0.3s ease, color 0.3s ease; font-family: sans-serif; overflow: hidden; }
-        .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; }
-        .circle { width: 150px; height: 150px; background: radial-gradient(circle, var(--circle), var(--bg)); border-radius: 50%; box-shadow: 0 0 40px rgba(0,0,0,0.1); }
+        .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
+        .circle { width: 150px; height: 150px; background: radial-gradient(circle, var(--circle), var(--bg)); border-radius: 50%; box-shadow: 0 0 40px rgba(0,0,0,0.1); transition: transform 0.2s ease; }
         
-        #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; }
+        #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; user-select: none; }
         
         .controls-container { transition: all 0.5s ease-in-out; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .controls-container.active { transform: translateY(100px); opacity: 0.5; }
         
-        .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 1.0s ease-in-out; }
+        /* 將淡入淡出時間調整為 1.2s */
+        .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 1.2s ease-in-out; }
         
         .ui-group { background: var(--ui-bg); padding: 15px 25px; border-radius: 50px; display: flex; align-items: center; gap: 15px; }
         button:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -28,7 +29,7 @@
     </style>
 </head>
 <body>
-    <div class="visual-area">
+    <div class="visual-area" onclick="cycleDisplayMode()">
         <div class="circle" id="circle"></div>
         <div id="timer-display"></div>
     </div>
@@ -50,7 +51,16 @@
         function updateHue(val) { document.documentElement.style.setProperty('--hue', val); }
         const circle = document.getElementById('circle'), status = document.getElementById('status'), timerDisplay = document.getElementById('timer-display'), controls = document.getElementById('controls');
         const btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop');
+        
         let isRunning = false;
+        let displayMode = 2; 
+        
+        function cycleDisplayMode() {
+            displayMode = (displayMode + 1) % 4;
+            circle.style.transform = "scale(0.95)";
+            setTimeout(() => circle.style.transform = "scale(1)", 100);
+        }
+
         const configs = { "4-2-6": {inhale:4, hold1:2, exhale:6, hold2:0}, "4-7-8": {inhale:4, hold1:7, exhale:8, hold2:0}, "4-4-4-4": {inhale:4, hold1:4, exhale:4, hold2:4} };
 
         async function toggleBreathing(start) {
@@ -71,7 +81,10 @@
                         circle.style.transform = `scale(${p.s})`;
                         for(let i = p.d; i > 0; i--) {
                             if(!isRunning) break;
-                            timerDisplay.innerText = `${i}\n${p.t}`;
+                            if(displayMode === 0) timerDisplay.innerText = `${i}\n${p.t}`;
+                            else if(displayMode === 1) timerDisplay.innerText = (p.t === "保持") ? "保持" : `${i}`;
+                            else if(displayMode === 2) timerDisplay.innerText = `${p.t}`;
+                            else timerDisplay.innerText = "";
                             await new Promise(r => setTimeout(r, 1000));
                         }
                     }
@@ -82,24 +95,16 @@
         async function stopBreathing() {
             isRunning = false; btnStop.disabled = true;
             timerDisplay.innerText = ""; 
-            
             circle.style.transition = "transform 0.8s ease-in-out";
             circle.style.transform = "scale(1)";
-            
             controls.classList.remove('active');
             await new Promise(r => controls.addEventListener('transitionend', r, {once: true}));
-            
             await new Promise(r => setTimeout(r, 1000));
-            
-            status.style.opacity = 1;
-            status.innerText = "你做得很棒！";
+            status.style.opacity = 1; status.innerText = "你做得很棒！";
             await new Promise(r => setTimeout(r, 2000));
-            
             status.style.opacity = 0;
             await new Promise(r => status.addEventListener('transitionend', r, {once: true}));
-            status.innerText = "準備好了嗎？"; 
-            status.style.opacity = 1;
-            
+            status.innerText = "準備好了嗎？"; status.style.opacity = 1;
             btnStart.disabled = false;
         }
     </script>
