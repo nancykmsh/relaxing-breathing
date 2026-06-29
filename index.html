@@ -30,7 +30,8 @@
         .visual-area { height: 350px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; touch-action: manipulation; }
         #circle-wrapper { display: flex; align-items: center; justify-content: center; transform: scale(1); }
         .circle { width: 150px; height: 150px; background: radial-gradient(circle, var(--circle), var(--bg)); border-radius: 50%; box-shadow: 0 0 40px rgba(0,0,0,0.1); transition: transform 0.2s ease; }
-        #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; user-select: none; }
+        
+        #timer-display { position: absolute; font-size: 28px; font-weight: 700; color: rgba(255, 255, 255, 0.8); pointer-events: none; z-index: 5; text-align: center; line-height: 1.2; user-select: none; transition: opacity 0.5s ease; }
         
         .controls-container { transition: all 0.5s ease-in-out; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .status-text { font-size: 24px; font-weight: 500; height: 30px; text-align: center; opacity: 1; transition: opacity 1.2s ease-in-out; pointer-events: none; }
@@ -40,7 +41,7 @@
         select { appearance: none; -webkit-appearance: none; -moz-appearance: none; border: none; font-size: 16px; color: var(--text); cursor: pointer; text-align: center; text-align-last: center; width: 65px; background: transparent; padding: 0; margin: 0; outline: none; white-space: nowrap; }
         input[type=range] { width: 100px; accent-color: var(--circle); cursor: pointer; }
         
-        #disclaimer { font-size: 12px; opacity: 0.4; margin-top: 15px; color: var(--text); font-style: italic; transition: opacity 0.5s ease-in-out; height: 1.2em; text-align: center; }
+        #disclaimer { font-size: 12px; opacity: 0; margin-top: 15px; color: var(--text); font-style: italic; transition: opacity 1.5s ease-in-out; height: 1.2em; text-align: center; pointer-events: none; }
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         button { cursor: pointer; background: transparent; border: none; font-size: 16px; color: var(--text); width: 40px; height: 40px; border-radius: 50%; background: var(--btn-bg); color: #fff; }
     </style>
@@ -71,32 +72,27 @@
         <div id="disclaimer">單擊圓圈切換引導模式</div>
     </div>
     <script>
-        const clock = document.getElementById('digital-clock'), visualArea = document.getElementById('visual-area'), circleWrapper = document.getElementById('circle-wrapper'), circle = document.getElementById('circle'), status = document.getElementById('status'), timerDisplay = document.getElementById('timer-display'), btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop'), hueSlider = document.getElementById('hue-slider');
+        const clock = document.getElementById('digital-clock'), visualArea = document.getElementById('visual-area'), circleWrapper = document.getElementById('circle-wrapper'), circle = document.getElementById('circle'), status = document.getElementById('status'), timerDisplay = document.getElementById('timer-display'), btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop'), hueSlider = document.getElementById('hue-slider'), disclaimerDiv = document.getElementById('disclaimer');
         let isRunning = false, displayMode = 0, autoHueInterval = null, hueValue = 180, tapTimer = null;
 
-        const tips = [
-            "單擊圓圈切換引導模式",
-            "雙擊圓圈開啟色彩循環",
-            "拖曳時鐘可調整位置",
-            "練習節奏，舒緩身心。"
-        ];
+        // 文字循環邏輯：4秒循環，淡出1.5s，最後一句永久顯示
+        const tips = ["單擊圓圈切換引導模式", "雙擊圓圈開啟色彩循環", "拖曳時鐘可調整位置", "練習節奏，舒緩身心。"];
         let tipIndex = 0;
-        const disclaimerDiv = document.getElementById('disclaimer');
         
+        window.onload = () => { setTimeout(() => { disclaimerDiv.style.opacity = 0.4; }, 500); };
+
         const tipInterval = setInterval(() => {
+            if (tipIndex >= tips.length - 1) {
+                clearInterval(tipInterval);
+                return;
+            }
             disclaimerDiv.style.opacity = 0;
             setTimeout(() => {
                 tipIndex++;
-                if (tipIndex < tips.length) {
-                    disclaimerDiv.innerText = tips[tipIndex];
-                    disclaimerDiv.style.opacity = 0.4;
-                } else {
-                    disclaimerDiv.innerText = tips[tips.length - 1];
-                    disclaimerDiv.style.opacity = 0.4;
-                    clearInterval(tipInterval);
-                }
-            }, 500);
-        }, 3000);
+                disclaimerDiv.innerText = tips[tipIndex];
+                disclaimerDiv.style.opacity = 0.4;
+            }, 1500);
+        }, 4000);
 
         function requestFullscreen() { const elem = document.documentElement; if (elem.requestFullscreen) elem.requestFullscreen(); else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(); }
         function exitFullscreen() { if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); }
@@ -114,7 +110,21 @@
         
         function pulseFeedback() { if ("vibrate" in navigator) navigator.vibrate(50); circleWrapper.style.transition = "transform 0.08s ease-out"; circleWrapper.style.transform = "scale(1.08)"; setTimeout(() => { circleWrapper.style.transition = "transform 0.12s ease-in-out"; circleWrapper.style.transform = "scale(0.97)"; }, 80); setTimeout(() => { circleWrapper.style.transition = "transform 0.18s ease-out"; circleWrapper.style.transform = "scale(1)"; }, 200); }
         function updateHue(val) { if (autoHueInterval) { clearInterval(autoHueInterval); autoHueInterval = null; } hueValue = val; document.documentElement.style.setProperty('--hue', val); }
-        visualArea.onclick = (e) => { pulseFeedback(); if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; toggleAutoHue(); } else { tapTimer = setTimeout(() => { tapTimer = null; displayMode = (displayMode + 1) % 3; }, 250); } };
+        
+        visualArea.onclick = (e) => { 
+            pulseFeedback(); 
+            if (tapTimer) { 
+                clearTimeout(tapTimer); tapTimer = null; toggleAutoHue(); 
+            } else { 
+                tapTimer = setTimeout(() => { 
+                    tapTimer = null; 
+                    displayMode = (displayMode + 1) % 3;
+                    timerDisplay.style.opacity = 0;
+                    setTimeout(() => { timerDisplay.style.opacity = 1; }, 50);
+                }, 250); 
+            } 
+        };
+        
         function showStatus(text, stay = 1000) { status.style.transition = "none"; status.style.opacity = 0; status.innerText = text; void status.offsetWidth; status.style.transition = "opacity 1.2s ease-in-out"; status.style.opacity = 1; setTimeout(() => { status.style.opacity = 0; setTimeout(() => { if (!isRunning) { status.innerText = "準備好了嗎？"; status.style.opacity = 1; } }, 1200); }, stay); }
         function toggleAutoHue() { if (autoHueInterval) { clearInterval(autoHueInterval); autoHueInterval = null; showStatus("已關閉色彩循環"); } else { autoHueInterval = setInterval(() => { hueValue = (parseInt(hueValue) + 1) % 360; hueSlider.value = hueValue; document.documentElement.style.setProperty('--hue', hueValue); }, 100); showStatus("已開啟色彩循環"); } }
         
