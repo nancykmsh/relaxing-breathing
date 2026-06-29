@@ -1,32 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>呼吸減壓</title>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;800&display=swap" rel="stylesheet">
-    <link rel="icon" href="IMG_0033.jpeg" type="image/jpeg">
-    <link rel="apple-touch-icon" href="IMG_0033.jpeg">
     <style>
         :root { --hue: 180; --bg: hsl(var(--hue), 20%, 95%); --text: #334155; --circle: hsl(var(--hue), 50%, 60%); --ui-bg: rgba(0,0,0,0.05); --btn-bg: #cbd5e1; }
         .theme-dark { --bg: #2d3436; --text: #dfe6e9; --circle: hsl(var(--hue), 20%, 40%); --ui-bg: rgba(255,255,255,0.08); --btn-bg: #636e72; }
 
         body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); margin: 0; color: var(--text); transition: background 0.3s ease, color 0.3s ease; font-family: sans-serif; overflow: hidden; }
         
-        #digital-clock { 
-            position: absolute; top: 12%; 
-            display: flex; align-items: center;
-            font-family: "Zen Maru Gothic", sans-serif;
-            font-size: 48px; font-weight: 800; 
-            color: var(--circle); 
-            opacity: 0.6; 
-            z-index: 20;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
-            cursor: grab;
-            touch-action: none;
-            user-select: none;
-        }
-        
+        #digital-clock { position: absolute; top: 12%; display: flex; align-items: center; font-family: "Zen Maru Gothic", sans-serif; font-size: 48px; font-weight: 800; color: var(--circle); opacity: 0.6; z-index: 20; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); cursor: grab; touch-action: none; user-select: none; }
         .is-active #digital-clock { transform: translateY(-80px); }
         .is-active .controls-container { transform: translateY(100px); opacity: 0.5; }
         
@@ -76,11 +63,22 @@
             <button id="btn-start" onclick="toggleBreathing(true)">▶</button>
             <button id="btn-stop" onclick="stopBreathing()" disabled>■</button>
         </div>
-        <div class="disclaimer">可拖曳時鐘，練習節奏，舒緩身心。</div>
+        <div class="disclaimer">點擊圓圈切換模式，拖曳時鐘移動位置。</div>
     </div>
     <script>
         const clock = document.getElementById('digital-clock'), visualArea = document.getElementById('visual-area'), circleWrapper = document.getElementById('circle-wrapper'), circle = document.getElementById('circle'), status = document.getElementById('status'), timerDisplay = document.getElementById('timer-display'), btnStart = document.getElementById('btn-start'), btnStop = document.getElementById('btn-stop'), hueSlider = document.getElementById('hue-slider');
         let isRunning = false, displayMode = 2, autoHueInterval = null, hueValue = 180, tapTimer = null;
+
+        // 全螢幕功能
+        function requestFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        }
+        function exitFullscreen() {
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
 
         // 拖曳邏輯
         let isDragging = false, startY, initialTop;
@@ -94,18 +92,38 @@
         function updateClock() { document.getElementById("clock-hour").textContent = String(new Date().getHours()).padStart(2, '0'); document.getElementById("clock-minute").textContent = String(new Date().getMinutes()).padStart(2, '0'); }
         setInterval(updateClock, 1000); updateClock();
         
-        function pulseFeedback() { if (navigator.vibrate) navigator.vibrate(50); circleWrapper.style.transition = "transform 0.08s ease-out"; circleWrapper.style.transform = "scale(1.08)"; setTimeout(() => { circleWrapper.style.transition = "transform 0.12s ease-in-out"; circleWrapper.style.transform = "scale(0.97)"; }, 80); setTimeout(() => { circleWrapper.style.transition = "transform 0.18s ease-out"; circleWrapper.style.transform = "scale(1)"; }, 200); }
+        function pulseFeedback() { if ("vibrate" in navigator) navigator.vibrate(50); circleWrapper.style.transition = "transform 0.08s ease-out"; circleWrapper.style.transform = "scale(1.08)"; setTimeout(() => { circleWrapper.style.transition = "transform 0.12s ease-in-out"; circleWrapper.style.transform = "scale(0.97)"; }, 80); setTimeout(() => { circleWrapper.style.transition = "transform 0.18s ease-out"; circleWrapper.style.transform = "scale(1)"; }, 200); }
         function updateHue(val) { if (autoHueInterval) { clearInterval(autoHueInterval); autoHueInterval = null; } hueValue = val; document.documentElement.style.setProperty('--hue', val); }
         visualArea.onclick = (e) => { pulseFeedback(); if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; toggleAutoHue(); } else { tapTimer = setTimeout(() => { tapTimer = null; displayMode = (displayMode + 1) % 4; }, 250); } };
         function showStatus(text, stay = 1000) { status.style.transition = "none"; status.style.opacity = 0; status.innerText = text; void status.offsetWidth; status.style.transition = "opacity 1.2s ease-in-out"; status.style.opacity = 1; setTimeout(() => { status.style.opacity = 0; setTimeout(() => { if (!isRunning) { status.innerText = "準備好了嗎？"; status.style.opacity = 1; } }, 1200); }, stay); }
         function toggleAutoHue() { if (autoHueInterval) { clearInterval(autoHueInterval); autoHueInterval = null; showStatus("已關閉色彩循環"); } else { autoHueInterval = setInterval(() => { hueValue = (parseInt(hueValue) + 1) % 360; hueSlider.value = hueValue; document.documentElement.style.setProperty('--hue', hueValue); }, 100); showStatus("已開啟色彩循環"); } }
         
         const configs = { "4-2-6": {inhale:4, hold1:2, exhale:6, hold2:0}, "4-7-8": {inhale:4, hold1:7, exhale:8, hold2:0}, "4-4-4-4": {inhale:4, hold1:4, exhale:4, hold2:4} };
-        async function toggleBreathing(start) { isRunning = true; btnStart.disabled = true; btnStop.disabled = false; document.body.classList.add('is-active'); status.style.opacity = 0; while(isRunning) { const cfg = configs[document.getElementById('mode').value]; const phases = [{t: "吸氣", s: 2.2, d: cfg.inhale}, {t: "保持", s: 2.2, d: cfg.hold1}, {t: "吐氣", s: 1, d: cfg.exhale}, {t: "保持", s: 1, d: cfg.hold2}]; for(let p of phases) { if(!isRunning) break; if(p.d > 0) { circle.style.transition = `transform ${p.d}s linear`; circle.style.transform = `scale(${p.s})`; for(let i = p.d; i > 0; i--) { if(!isRunning) break; if(displayMode === 0) timerDisplay.innerText = `${i}\n${p.t}`; else if(displayMode === 1) timerDisplay.innerText = (p.t === "保持") ? "保持" : `${i}`; else if(displayMode === 2) timerDisplay.innerText = `${p.t}`; else timerDisplay.innerText = ""; await new Promise(r => setTimeout(r, 1000)); } } } } }
-        async function stopBreathing() { isRunning = false; btnStop.disabled = true; timerDisplay.innerText = ""; circle.style.transition = "transform 0.8s ease-in-out"; circle.style.transform = "scale(1)"; 
+        async function toggleBreathing(start) { 
+            requestFullscreen();
+            isRunning = true; btnStart.disabled = true; btnStop.disabled = false; document.body.classList.add('is-active'); status.style.opacity = 0; 
+            while(isRunning) { 
+                const cfg = configs[document.getElementById('mode').value]; 
+                const phases = [{t: "吸氣", s: 2.2, d: cfg.inhale}, {t: "保持", s: 2.2, d: cfg.hold1}, {t: "吐氣", s: 1, d: cfg.exhale}, {t: "保持", s: 1, d: cfg.hold2}]; 
+                for(let p of phases) { 
+                    if(!isRunning) break; 
+                    if(p.d > 0) { 
+                        circle.style.transition = `transform ${p.d}s linear`; circle.style.transform = `scale(${p.s})`; 
+                        for(let i = p.d; i > 0; i--) { 
+                            if(!isRunning) break; 
+                            if(displayMode === 0) timerDisplay.innerText = `${i}\n${p.t}`; else if(displayMode === 1) timerDisplay.innerText = (p.t === "保持") ? "保持" : `${i}`; else if(displayMode === 2) timerDisplay.innerText = `${p.t}`; else timerDisplay.innerText = ""; await new Promise(r => setTimeout(r, 1000)); 
+                        } 
+                    } 
+                } 
+            } 
+        }
+        async function stopBreathing() { 
+            exitFullscreen();
+            isRunning = false; btnStop.disabled = true; timerDisplay.innerText = ""; circle.style.transition = "transform 0.8s ease-in-out"; circle.style.transform = "scale(1)"; 
             clock.style.transition = "all 0.8s ease-in-out"; clock.style.top = "12%"; 
             setTimeout(() => { clock.style.removeProperty('top'); clock.style.transition = ""; }, 800);
-            document.body.classList.remove('is-active'); await new Promise(r => setTimeout(r, 1000)); status.style.opacity = 1; status.innerText = "你做得很棒！"; await new Promise(r => setTimeout(r, 2000)); status.style.opacity = 0; await new Promise(r => setTimeout(r, 1200)); status.innerText = "準備好了嗎？"; status.style.opacity = 1; btnStart.disabled = false; }
+            document.body.classList.remove('is-active'); await new Promise(r => setTimeout(r, 1000)); status.style.opacity = 1; status.innerText = "你做得很棒！"; await new Promise(r => setTimeout(r, 2000)); status.style.opacity = 0; await new Promise(r => setTimeout(r, 1200)); status.innerText = "準備好了嗎？"; status.style.opacity = 1; btnStart.disabled = false; 
+        }
     </script>
 </body>
 </html>
